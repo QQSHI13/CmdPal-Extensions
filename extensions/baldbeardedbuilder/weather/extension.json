@@ -20,6 +20,11 @@
     "news-and-weather",
     "utilities-and-tools"
   ],
+  "screenshotUrls": [
+    "https://github.com/user-attachments/assets/215361e8-73ee-41a2-80f2-87f072b54984",
+    "https://github.com/user-attachments/assets/de211d03-78b7-459c-9899-214ce21b7549",
+    "https://github.com/user-attachments/assets/83100ce9-d254-481e-9de2-2c1787a58029"
+  ],
   "installSources": [
     {
       "type": "msstore",
