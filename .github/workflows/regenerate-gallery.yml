@@ -54,6 +54,7 @@ jobs:
           fi
 
       - name: Open pull request
+        id: cpr
         if: steps.diff.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
@@ -68,3 +69,9 @@ jobs:
             This PR was opened by the scheduled **Regenerate Gallery** workflow
             because the gallery content changed. Review and merge to publish.
           labels: automated
+
+      - name: Enable auto-merge
+        if: steps.diff.outputs.changed == 'true' && steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge --squash --auto "${{ steps.cpr.outputs.pull-request-number }}"
