@@ -1,0 +1,70 @@
+name: Regenerate Gallery
+
+on:
+  # Run every 24 hours at 04:00 UTC.
+  schedule:
+    - cron: "0 4 * * *"
+  # Allow manual runs from the Actions tab.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Prevent overlapping runs from racing on the PR branch.
+concurrency:
+  group: regenerate-gallery
+  cancel-in-progress: false
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Regenerate extensions.json
+        run: python .github/scripts/generate.py
+
+      - name: Detect meaningful changes
+        id: diff
+        run: |
+          if git diff --quiet -- extensions.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes to extensions.json."
+            exit 0
+          fi
+
+          # extensions.json changed, but the generatedAt timestamp updates on
+          # every run. Only commit when something other than generatedAt differs.
+          old=$(git show HEAD:extensions.json | jq -S 'del(.generatedAt)')
+          new=$(jq -S 'del(.generatedAt)' extensions.json)
+          if [ "$old" = "$new" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Only generatedAt changed; skipping commit."
+            git checkout -- extensions.json
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Gallery content changed; will commit."
+          fi
+
+      - name: Open pull request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          add-paths: extensions.json
+          branch: chore/regenerate-gallery
+          commit-message: "chore: regenerate extensions.json"
+          title: "chore: regenerate extensions.json"
+          body: |
+            Automated regeneration of `extensions.json` from the extension
+            manifests under `extensions/`.
+
+            This PR was opened by the scheduled **Regenerate Gallery** workflow
+            because the gallery content changed. Review and merge to publish.
+          labels: automated
